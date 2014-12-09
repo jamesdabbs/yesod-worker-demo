@@ -68,7 +68,7 @@ library
                  , monad-logger                  >= 0.3        && < 0.4
                  , fast-logger                   >= 2.2        && < 2.3
                  , wai-logger                    >= 2.2        && < 2.3
-                 , yesod-worker
+                 , yesod-worker                  >= 0.0.2
 
     -- see https://github.com/yesodweb/yesod/issues/814
     if !os(windows)

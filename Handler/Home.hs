@@ -6,6 +6,8 @@ import Yesod.Form.Bootstrap3
     ( BootstrapFormLayout (..), renderBootstrap3, withSmallInput )
 import Yesod.Worker (enqueue)
 
+import Control.Monad (forM_)
+
 -- This is a handler function for the GET request method on the HomeR
 -- resource pattern. All of your resource patterns are defined in
 -- config/routes
@@ -15,8 +17,7 @@ import Yesod.Worker (enqueue)
 -- inclined, or create a single monolithic file.
 getHomeR :: Handler Html
 getHomeR = do
-    enqueue $ CountJob 5
-    enqueue $ UserJob
+    forM_ [1..10] (enqueue . LoopJob)
     (formWidget, formEnctype) <- generateFormPost sampleForm
     let submission = Nothing :: Maybe (FileInfo, Text)
         handlerName = "getHomeR" :: Text

@@ -19,14 +19,17 @@ import Text.Jasmine (minifym)
 import Text.Hamlet (hamletFile)
 import Yesod.Core.Types (Logger)
 
-import Yesod.Worker (JobQueue, YesodWorker(..), defaultRunW)
+import Yesod.Worker (YesodWorker(..), defaultRunW, Workers)
+import Yesod.Worker.Site ()
 
 -- Only required for the sample CountJob implementation
 import Control.Concurrent (threadDelay)
 import Control.Monad (forM, void)
+import Data.Monoid ((<>))
+import qualified Data.Text as T
 
 
-data AppJob = CountJob Int | UserJob
+data AppJob = CountJob Int | UserJob | LoopJob Int deriving (Show, Read)
 
 -- | The site argument for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application
@@ -35,11 +38,11 @@ data AppJob = CountJob Int | UserJob
 data App = App
     { settings :: AppConfig DefaultEnv Extra
     , getStatic :: Static -- ^ Settings for static file serving.
+    , getWorkers :: Workers
     , connPool :: Database.Persist.PersistConfigPool Settings.PersistConf -- ^ Database connection pool.
     , httpManager :: Manager
     , persistConfig :: Settings.PersistConf
     , appLogger :: Logger
-    , appQueue :: JobQueue AppJob
     }
 
 instance HasHttpManager App where
@@ -157,12 +160,17 @@ instance YesodAuthPersist App
 
 instance YesodWorker App where
   type Job = AppJob
-  queue = appQueue
   runW = defaultRunW persistConfig connPool
+
+  workerSite = getWorkers
 
   perform (CountJob n) = void . forM [1..n] $ \k -> do
     lift . putStrLn . show $ k
     lift $ threadDelay 1000000
+  perform j@(LoopJob n) = do
+    $(logInfo) $ "Loop " <> (T.pack $ show n)
+    lift $ threadDelay $ n * 1000000
+    perform j
   perform UserJob = do
     n <- runW $ count ([] :: [Filter User])
     lift . putStrLn $ "There are " ++ (show n) ++ " users"

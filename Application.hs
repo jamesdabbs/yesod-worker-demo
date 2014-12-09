@@ -24,7 +24,7 @@ import Network.Wai.Logger (clockDateCacher)
 import Data.Default (def)
 import Yesod.Core.Types (loggerSet, Logger (Logger))
 
-import Yesod.Worker (emptyQueue, spawnWorkers)
+import Yesod.Worker (startWorkers)
 
 -- Import all relevant handler modules here.
 -- Don't forget to add new modules to your cabal file!
@@ -70,16 +70,15 @@ makeFoundation conf = do
     loggerSet' <- newStdoutLoggerSet defaultBufSize
     (getter, _) <- clockDateCacher
 
-    q <- emptyQueue
     let logger = Yesod.Core.Types.Logger loggerSet' getter
         mkFoundation p = App
             { settings = conf
             , getStatic = s
+            , getWorkers = error "Unitialized worker site"
             , connPool = p
             , httpManager = manager
             , persistConfig = dbconf
             , appLogger = logger
-            , appQueue = q
             }
         tempFoundation = mkFoundation $ error "connPool forced in tempFoundation"
         logFunc = messageLoggerSource tempFoundation logger
@@ -88,13 +87,12 @@ makeFoundation conf = do
        $ createSqlitePool (sqlDatabase dbconf) (sqlPoolSize dbconf)
     let foundation = mkFoundation p
 
-    spawnWorkers foundation
-
     -- Perform database migration using our application's logging settings.
     flip runLoggingT logFunc
         (Database.Persist.runPool dbconf (runMigration migrateAll) p)
 
-    return foundation
+    workers <- startWorkers foundation
+    return foundation { getWorkers = workers }
 
 -- for yesod devel
 getApplicationDev :: IO (Int, Application)
