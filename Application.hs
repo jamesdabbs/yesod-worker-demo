@@ -24,6 +24,8 @@ import Network.Wai.Logger (clockDateCacher)
 import Data.Default (def)
 import Yesod.Core.Types (loggerSet, Logger (Logger))
 
+import Yesod.Worker (emptyQueue, spawnWorkers)
+
 -- Import all relevant handler modules here.
 -- Don't forget to add new modules to your cabal file!
 import Handler.Home
@@ -68,6 +70,7 @@ makeFoundation conf = do
     loggerSet' <- newStdoutLoggerSet defaultBufSize
     (getter, _) <- clockDateCacher
 
+    q <- emptyQueue
     let logger = Yesod.Core.Types.Logger loggerSet' getter
         mkFoundation p = App
             { settings = conf
@@ -76,6 +79,7 @@ makeFoundation conf = do
             , httpManager = manager
             , persistConfig = dbconf
             , appLogger = logger
+            , appQueue = q
             }
         tempFoundation = mkFoundation $ error "connPool forced in tempFoundation"
         logFunc = messageLoggerSource tempFoundation logger
@@ -83,6 +87,8 @@ makeFoundation conf = do
     p <- flip runLoggingT logFunc
        $ createSqlitePool (sqlDatabase dbconf) (sqlPoolSize dbconf)
     let foundation = mkFoundation p
+
+    spawnWorkers foundation
 
     -- Perform database migration using our application's logging settings.
     flip runLoggingT logFunc

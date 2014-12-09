@@ -19,6 +19,15 @@ import Text.Jasmine (minifym)
 import Text.Hamlet (hamletFile)
 import Yesod.Core.Types (Logger)
 
+import Yesod.Worker (JobQueue, YesodWorker(..), defaultRunW)
+
+-- Only required for the sample CountJob implementation
+import Control.Concurrent (threadDelay)
+import Control.Monad (forM, void)
+
+
+data AppJob = CountJob Int | UserJob
+
 -- | The site argument for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application
 -- starts running, such as database connections. Every handler will have
@@ -30,6 +39,7 @@ data App = App
     , httpManager :: Manager
     , persistConfig :: Settings.PersistConf
     , appLogger :: Logger
+    , appQueue :: JobQueue AppJob
     }
 
 instance HasHttpManager App where
@@ -144,6 +154,18 @@ instance YesodAuth App where
     authHttpManager = httpManager
 
 instance YesodAuthPersist App
+
+instance YesodWorker App where
+  type Job = AppJob
+  queue = appQueue
+  runW = defaultRunW persistConfig connPool
+
+  perform (CountJob n) = void . forM [1..n] $ \k -> do
+    lift . putStrLn . show $ k
+    lift $ threadDelay 1000000
+  perform UserJob = do
+    n <- runW $ count ([] :: [Filter User])
+    lift . putStrLn $ "There are " ++ (show n) ++ " users"
 
 -- This instance is required to use forms. You can modify renderMessage to
 -- achieve customized and internationalized form validation messages.
