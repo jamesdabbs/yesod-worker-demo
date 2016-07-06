@@ -86,6 +86,8 @@ library
                  , time
                  , case-insensitive
                  , wai
+                 , keenser
+                 , hedis
 
 executable         yesub
     if flag(library-only)

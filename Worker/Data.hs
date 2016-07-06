@@ -20,48 +20,60 @@ import           Text.Show                           (show)
 import           Yesod
 import qualified Yesod.Core.Unsafe                   as Unsafe
 
-data Worker = Worker (MVar Int) (MVar ())
+import Keenser
+import Database.Redis
 
-mkYesodSubData "Worker" [parseRoutes|
-/count CountR GET POST
+data Workers = Workers (MVar Manager)
+
+mkYesodSubData "Workers" [parseRoutes|
+/count CountR GET
 |]
 
 class (Yesod master, RenderMessage master FormMessage) => YesodWorker master where
-  workers :: master -> Worker
+  workers :: master -> Workers
 
-type WorkerH a = YesodWorker master => HandlerT Worker (HandlerT master IO) a
+type WorkerH a = YesodWorker master => HandlerT Workers (HandlerT master IO) a
 
 bootWorkers :: YesodWorker master => HandlerT master IO ()
 bootWorkers = do
   foundation <- getYesod
-  let (Worker mcount _) = workers foundation
-  forkHandler handleError (forever $ tick mcount)
+  let (Workers mv) = workers foundation
+
+  conn <- liftIO $ connect defaultConnectInfo
+  conf <- mkConf conn $ do
+    concurrency 5
+    register blah
+
+  forkHandler handleError $ do
+    manager <- startProcess conf
+    liftIO $ putMVar mv manager
+
   return ()
 
 handleError :: e -> HandlerT site IO ()
 handleError _ = return ()
 
-tick :: Yesod master => MVar Int -> HandlerT master IO ()
-tick mv = do
-  n <- liftIO $ takeMVar mv
-  $(logWarn) $ "count is now " <> T.pack (show n)
-  liftIO $ do
-    putMVar mv (n + 7)
-    threadDelay 3000000
+blah :: Yesod master => Worker (HandlerT master IO) (Text, Int)
+blah = Worker "blah" "default" $ \(word, n) ->
+  replicateM_ n $ do
+    $(logWarn) word
+    liftIO . threadDelay $ 1000000
 
-resetWorkers :: YesodWorker master => HandlerT master IO ()
-resetWorkers = do
-  (Worker mcount _) <- workers <$> getYesod
-  liftIO $ modifyMVar_ mcount $ \n -> return (n + 1)
-  return ()
+getManager :: YesodWorker master => HandlerT master IO Manager
+getManager = do
+  foundation <- getYesod
+  let (Workers manager) = workers foundation
+  liftIO $ readMVar manager
+
+enqueue :: ToJSON a => YesodWorker master => Worker (HandlerT master IO) a -> a -> HandlerT master IO ()
+enqueue job args = do
+  manager <- getManager
+  Keenser.enqueue manager job args
 
 getCountR :: WorkerH Text
-getCountR = do
-  (Worker mcount _) <- getYesod
-  n <- liftIO $ readMVar mcount
-  return . T.pack . show $ n
+getCountR = return "TODO: getCountR"
+  -- (Worker mcount _) <- getYesod
+  -- n <- liftIO $ readMVar mcount
+  -- return . T.pack . show $ n
 
-postCountR :: WorkerH ()
-postCountR = return ()
-
-newWorker = Worker <$> newMVar 0 <*> newMVar ()
+newWorkers = Workers <$> newEmptyMVar

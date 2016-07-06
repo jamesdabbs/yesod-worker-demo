@@ -1,6 +1,6 @@
-/static  StaticR Static appStatic
-/auth    AuthR   Auth   getAuth
-/workers WorkerR Worker getWorkers
+/static  StaticR Static  appStatic
+/auth    AuthR   Auth    getAuth
+/workers WorkerR Workers getWorkers
 
 /favicon.ico FaviconR GET
 /robots.txt RobotsR GET

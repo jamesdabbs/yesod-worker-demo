@@ -12,5 +12,5 @@ import Prelude (IO)
 import Worker.Data
 import Yesod
 
-instance YesodWorker master => YesodSubDispatch Worker (HandlerT master IO) where
-  yesodSubDispatch = $(mkYesodSubDispatch resourcesWorker)
+instance YesodWorker master => YesodSubDispatch Workers (HandlerT master IO) where
+  yesodSubDispatch = $(mkYesodSubDispatch resourcesWorkers)

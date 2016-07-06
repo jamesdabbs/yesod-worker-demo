@@ -5,7 +5,8 @@ import Yesod.Form.Bootstrap3 (BootstrapFormLayout (..), renderBootstrap3,
                               withSmallInput)
 import Text.Julius (RawJS (..))
 
-import Worker.Data (resetWorkers)
+import Worker.Data
+import Keenser (Worker)
 
 -- This is a handler function for the GET request method on the HomeR
 -- resource pattern. All of your resource patterns are defined in
@@ -16,7 +17,7 @@ import Worker.Data (resetWorkers)
 -- inclined, or create a single monolithic file.
 getHomeR :: Handler Html
 getHomeR = do
-    resetWorkers
+    enqueue (blah :: Worker Handler (Text, Int)) ("getHomeR", 3)
 
     (formWidget, formEnctype) <- generateFormPost sampleForm
     let submission = Nothing :: Maybe (FileInfo, Text)
