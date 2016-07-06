@@ -11,6 +11,9 @@ import qualified Yesod.Core.Unsafe as Unsafe
 import qualified Data.CaseInsensitive as CI
 import qualified Data.Text.Encoding as TE
 
+import Worker
+import Worker.Data
+
 -- | The foundation datatype for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application
 -- starts running, such as database connections. Every handler will have
@@ -21,6 +24,7 @@ data App = App
     , appConnPool    :: ConnectionPool -- ^ Database connection pool.
     , appHttpManager :: Manager
     , appLogger      :: Logger
+    , getWorkers     :: Worker
     }
 
 -- This is where we define all of the routes in our application. For a full
@@ -151,6 +155,9 @@ instance YesodAuth App where
     authHttpManager = getHttpManager
 
 instance YesodAuthPersist App
+
+instance YesodWorker App where
+  workers = getWorkers
 
 -- This instance is required to use forms. You can modify renderMessage to
 -- achieve customized and internationalized form validation messages.
