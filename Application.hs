@@ -36,8 +36,9 @@ import Handler.Common
 import Handler.Home
 import Handler.Comment
 
-import Worker
-import Worker.Data
+import qualified Data.Text as T
+import Yesod.Worker
+import Jobs
 
 -- This line actually creates our YesodDispatch instance. It is the second half
 -- of the call to mkYesodData which occurs in Foundation.hs. Please see the
@@ -87,7 +88,12 @@ makeFoundation appSettings = do
 -- applying some additional middlewares.
 makeApplication :: App -> IO Application
 makeApplication foundation = do
-    unsafeHandler foundation bootWorkers
+    unsafeHandler foundation $ do
+      bootWorkers allJobs
+      forM_ [1 .. 50] $ \n ->
+        let name = "~~~> " <> T.pack (show n)
+        in enqueue blah (name, 3)
+
     logWare <- makeLogWare foundation
     -- Create the WAI application and apply middlewares
     appPlain <- toWaiAppPlain foundation

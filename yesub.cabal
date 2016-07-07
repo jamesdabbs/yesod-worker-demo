@@ -17,14 +17,13 @@ library
                      Foundation
                      Import
                      Import.NoFoundation
+                     Jobs
                      Model
                      Settings
                      Settings.StaticFiles
                      Handler.Common
                      Handler.Home
                      Handler.Comment
-                     Worker.Data
-                     Worker
 
     if flag(dev) || flag(library-only)
         cpp-options:   -DDEVELOPMENT
@@ -86,8 +85,7 @@ library
                  , time
                  , case-insensitive
                  , wai
-                 , keenser
-                 , hedis
+                 , yesod-worker
 
 executable         yesub
     if flag(library-only)
